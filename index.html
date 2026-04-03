@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Gigisehat - Deteksi & Edukasi Kesehatan Gigi</title>
+    <title>Gigisehat - Deteksi Dini Masalah Gigi</title>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- jsPDF -->
@@ -41,15 +41,26 @@
         }
         .auth-card h2 { color: #1e3c72; margin-bottom: 10px; }
         .auth-card p { color: #666; margin-bottom: 30px; }
+        .input-group {
+            position: relative;
+            margin: 10px 0;
+        }
         .input-field {
             width: 100%;
-            padding: 12px 15px;
-            margin: 10px 0;
+            padding: 12px 40px 12px 15px;
             border: 2px solid #ddd;
             border-radius: 50px;
             font-size: 16px;
         }
         .input-field:focus { border-color: #2c7da0; outline: none; }
+        .toggle-password {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #888;
+        }
         .auth-btn {
             background: linear-gradient(135deg, #2c7da0, #1e5a7a);
             color: white;
@@ -225,13 +236,18 @@
 </head>
 <body>
 
-<!-- LOGIN & SIGNUP -->
+<!-- LOGIN & SIGNUP PAGE -->
 <div id="authPage" class="auth-container">
     <div class="auth-card" id="loginForm">
         <h2>🦷 Gigisehat</h2>
         <p>Deteksi Dini & Edukasi Kesehatan Gigi</p>
-        <input type="text" id="loginUsername" class="input-field" placeholder="Username">
-        <input type="password" id="loginPassword" class="input-field" placeholder="Password">
+        <div class="input-group">
+            <input type="text" id="loginUsername" class="input-field" placeholder="Username" autocomplete="off">
+        </div>
+        <div class="input-group">
+            <input type="password" id="loginPassword" class="input-field" placeholder="Password">
+            <i class="fas fa-eye toggle-password" onclick="togglePassword('loginPassword', this)"></i>
+        </div>
         <button class="auth-btn" onclick="handleLogin()">Masuk</button>
         <div id="loginError" class="error-msg"></div>
         <div class="switch-auth" onclick="toggleAuthForm()">Belum punya akun? Daftar</div>
@@ -239,8 +255,13 @@
     <div class="auth-card" id="signupForm" style="display:none;">
         <h2>🦷 Daftar Akun Baru</h2>
         <p>Buat akun untuk mulai menggunakan Gigisehat</p>
-        <input type="text" id="signupUsername" class="input-field" placeholder="Username">
-        <input type="password" id="signupPassword" class="input-field" placeholder="Password">
+        <div class="input-group">
+            <input type="text" id="signupUsername" class="input-field" placeholder="Username" autocomplete="off">
+        </div>
+        <div class="input-group">
+            <input type="password" id="signupPassword" class="input-field" placeholder="Password">
+            <i class="fas fa-eye toggle-password" onclick="togglePassword('signupPassword', this)"></i>
+        </div>
         <button class="auth-btn" onclick="handleSignup()">Daftar</button>
         <div id="signupError" class="error-msg"></div>
         <div class="switch-auth" onclick="toggleAuthForm()">Sudah punya akun? Masuk</div>
@@ -266,7 +287,7 @@
                 <h1>Jaga Senyum Sehatmu</h1>
                 <p>Deteksi dini gigi berlubang, edukasi, dan pantau kesehatan gigi Anda</p>
             </div>
-            <div class="tips-section">
+            <div class="detection-section">
                 <h2><i class="fas fa-star"></i> Tips Hari Ini</h2>
                 <div class="tips-grid" id="homeTips"></div>
             </div>
@@ -327,40 +348,82 @@
 <div id="toast" class="toast"></div>
 
 <script>
-    // ==================== MANAJEMEN AKUN ====================
+    // ==================== MANAJEMEN AKUN (dengan perbaikan login & ikon mata) ====================
     if (!localStorage.getItem('accounts')) {
         localStorage.setItem('accounts', JSON.stringify([{ username: 'user', password: 'user123' }]));
     }
-    function getAccounts() { return JSON.parse(localStorage.getItem('accounts')) || []; }
-    function saveAccounts(accounts) { localStorage.setItem('accounts', JSON.stringify(accounts)); }
+
+    function getAccounts() {
+        return JSON.parse(localStorage.getItem('accounts')) || [];
+    }
+
+    function saveAccounts(accounts) {
+        localStorage.setItem('accounts', JSON.stringify(accounts));
+    }
+
+    // Toggle password visibility
+    function togglePassword(fieldId, iconElem) {
+        const field = document.getElementById(fieldId);
+        if (field.type === "password") {
+            field.type = "text";
+            iconElem.classList.remove("fa-eye");
+            iconElem.classList.add("fa-eye-slash");
+        } else {
+            field.type = "password";
+            iconElem.classList.remove("fa-eye-slash");
+            iconElem.classList.add("fa-eye");
+        }
+    }
 
     function handleSignup() {
-        const username = document.getElementById('signupUsername').value.trim();
-        const password = document.getElementById('signupPassword').value.trim();
+        let username = document.getElementById('signupUsername').value.trim();
+        let password = document.getElementById('signupPassword').value.trim();
         const errorDiv = document.getElementById('signupError');
-        if (!username || !password) { errorDiv.innerText = 'Username dan password tidak boleh kosong!'; return; }
+
+        if (!username || !password) {
+            errorDiv.innerText = 'Username dan password tidak boleh kosong!';
+            return;
+        }
+
         const accounts = getAccounts();
-        if (accounts.find(acc => acc.username === username)) { errorDiv.innerText = 'Username sudah terdaftar!'; return; }
-        accounts.push({ username, password });
+        const exists = accounts.some(acc => acc.username.toLowerCase() === username.toLowerCase());
+        if (exists) {
+            errorDiv.innerText = 'Username sudah terdaftar. Gunakan username lain.';
+            return;
+        }
+
+        accounts.push({ username: username, password: password });
         saveAccounts(accounts);
         errorDiv.innerText = '';
-        const msg = document.createElement('div'); msg.className = 'success-msg'; msg.innerText = 'Pendaftaran berhasil! Silakan masuk.';
-        document.getElementById('signupForm').appendChild(msg);
-        setTimeout(() => { msg.remove(); toggleAuthForm(); }, 1500);
+        const successMsg = document.createElement('div');
+        successMsg.className = 'success-msg';
+        successMsg.innerText = 'Pendaftaran berhasil! Silakan masuk.';
+        document.getElementById('signupForm').appendChild(successMsg);
+        setTimeout(() => {
+            successMsg.remove();
+            toggleAuthForm();
+        }, 1500);
     }
 
     function handleLogin() {
-        const username = document.getElementById('loginUsername').value.trim();
-        const password = document.getElementById('loginPassword').value.trim();
+        let username = document.getElementById('loginUsername').value.trim();
+        let password = document.getElementById('loginPassword').value.trim();
         const errorDiv = document.getElementById('loginError');
-        if (!username || !password) { errorDiv.innerText = 'Masukkan username dan password!'; return; }
+
+        if (!username || !password) {
+            errorDiv.innerText = 'Masukkan username dan password!';
+            return;
+        }
+
         const accounts = getAccounts();
         const user = accounts.find(acc => acc.username === username && acc.password === password);
         if (user) {
             localStorage.setItem('currentUser', username);
             initUserData(username);
             showApp();
-        } else { errorDiv.innerText = 'Username atau password salah!'; }
+        } else {
+            errorDiv.innerText = 'Username atau password salah! Coba lagi.';
+        }
     }
 
     function initUserData(username) {
@@ -372,6 +435,9 @@
         localStorage.removeItem('currentUser');
         document.getElementById('authPage').style.display = 'flex';
         document.getElementById('appContainer').style.display = 'none';
+        document.getElementById('loginUsername').value = '';
+        document.getElementById('loginPassword').value = '';
+        document.getElementById('loginError').innerText = '';
         stopCamera();
         resetDetectionUI();
     }
@@ -398,12 +464,31 @@
         });
     }
 
-    function showToast(msg) {
-        const toast = document.getElementById('toast');
-        toast.innerText = msg;
-        toast.style.display = 'block';
-        setTimeout(() => { toast.style.display = 'none'; }, 3000);
+    function toggleAuthForm() {
+        const login = document.getElementById('loginForm'), signup = document.getElementById('signupForm');
+        if (login.style.display === 'none') {
+            login.style.display = 'block';
+            signup.style.display = 'none';
+        } else {
+            login.style.display = 'none';
+            signup.style.display = 'block';
+        }
+        document.getElementById('loginError').innerText = '';
+        document.getElementById('signupError').innerText = '';
+        document.getElementById('loginUsername').value = '';
+        document.getElementById('loginPassword').value = '';
+        document.getElementById('signupUsername').value = '';
+        document.getElementById('signupPassword').value = '';
     }
+
+    window.onload = () => {
+        if (localStorage.getItem('currentUser')) {
+            showApp();
+        } else {
+            document.getElementById('authPage').style.display = 'flex';
+            document.getElementById('appContainer').style.display = 'none';
+        }
+    };
 
     // ==================== TIPS & ARTIKEL ====================
     const articles = [
@@ -414,6 +499,7 @@
     ];
     function loadTipsArticles() {
         const container = document.getElementById('articlesList');
+        if (!container) return;
         container.innerHTML = '';
         articles.forEach(art => {
             const user = localStorage.getItem('currentUser');
@@ -454,6 +540,7 @@
         const user = localStorage.getItem('currentUser');
         let bookmarks = JSON.parse(localStorage.getItem(`bookmarks_${user}`)) || [];
         const container = document.getElementById('bookmarkedList');
+        if (!container) return;
         if (bookmarks.length === 0) { container.innerHTML = '<p>Belum ada tips yang disimpan.</p>'; return; }
         container.innerHTML = '';
         bookmarks.forEach(id => {
@@ -475,7 +562,7 @@
             date: new Date().toLocaleString(),
             result: resultText,
             advice: advice,
-            image: imageData // base64 thumbnail (optional)
+            image: imageData
         };
         history.unshift(newRecord);
         if (history.length > 20) history.pop();
@@ -487,20 +574,23 @@
         let history = JSON.parse(localStorage.getItem(`history_${user}`)) || [];
         const container = document.getElementById('historyList');
         const recentContainer = document.getElementById('recentHistory');
-        if (!container) return;
-        if (history.length === 0) { container.innerHTML = '<p>Belum ada riwayat deteksi.</p>'; if(recentContainer) recentContainer.innerHTML = '<p>Belum ada deteksi.</p>'; return; }
-        container.innerHTML = '';
-        history.forEach(rec => {
-            const div = document.createElement('div'); div.className = 'history-item';
-            div.innerHTML = `
-                <div><strong>${rec.date}</strong><br>${rec.result.substring(0, 100)}</div>
-                <button class="btn-pdf" onclick="generateSinglePDF('${rec.id}')"><i class="fas fa-file-pdf"></i> PDF</button>
-            `;
-            container.appendChild(div);
-        });
+        if (container) {
+            if (history.length === 0) { container.innerHTML = '<p>Belum ada riwayat deteksi.</p>'; }
+            else {
+                container.innerHTML = '';
+                history.forEach(rec => {
+                    const div = document.createElement('div'); div.className = 'history-item';
+                    div.innerHTML = `
+                        <div><strong>${rec.date}</strong><br>${rec.result.substring(0, 100)}</div>
+                        <button class="btn-pdf" onclick="generateSinglePDF('${rec.id}')"><i class="fas fa-file-pdf"></i> PDF</button>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+        }
         if (recentContainer) {
             let recent = history.slice(0, 3);
-            recentContainer.innerHTML = recent.map(r => `<div class="history-item">${r.date} - ${r.result.substring(0, 60)}</div>`).join('') || '<p>Tidak ada</p>';
+            recentContainer.innerHTML = recent.map(r => `<div class="history-item">${r.date} - ${r.result.substring(0, 60)}</div>`).join('') || '<p>Tidak ada deteksi baru.</p>';
         }
     }
     async function generateSinglePDF(recordId) {
@@ -540,7 +630,7 @@
     function openCamera() {
         stopCamera();
         const video = document.getElementById('cameraStream');
-        if (navigator.mediaDevices) {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
             navigator.mediaDevices.getUserMedia({ video: true })
                 .then(mediaStream => {
                     stream = mediaStream;
@@ -551,19 +641,28 @@
                     document.getElementById('analyzeBtn').style.display = 'none';
                     currentImageData = null;
                 })
-                .catch(err => alert("Kamera error: " + err.message));
-        } else alert("Browser tidak support kamera");
+                .catch(err => {
+                    let msg = "Kamera error: " + err.message;
+                    if (err.name === 'NotAllowedError') msg = "Izin kamera ditolak. Izinkan akses kamera.";
+                    alert(msg);
+                });
+        } else alert("Browser tidak mendukung akses kamera.");
     }
     function stopCamera() {
-        if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            stream = null;
+        }
         const video = document.getElementById('cameraStream');
-        video.style.display = 'none'; video.srcObject = null;
+        video.style.display = 'none';
+        video.srcObject = null;
         document.getElementById('captureBtn').style.display = 'none';
     }
     function captureFromCamera() {
         const video = document.getElementById('cameraStream');
         const canvas = document.getElementById('hiddenCanvas');
-        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
         canvas.getContext('2d').drawImage(video, 0, 0);
         currentImageData = canvas.toDataURL('image/jpeg');
         const imgPreview = document.getElementById('imagePreview');
@@ -576,6 +675,8 @@
     }
     function handleFileUpload(input) {
         if (input.files && input.files[0]) {
+            const file = input.files[0];
+            if (file.size > 5 * 1024 * 1024) { alert("Ukuran file maksimal 5MB"); return; }
             const reader = new FileReader();
             reader.onload = e => {
                 currentImageData = e.target.result;
@@ -585,7 +686,7 @@
                 document.getElementById('analyzeBtn').style.display = 'inline-block';
                 stopCamera();
             };
-            reader.readAsDataURL(input.files[0]);
+            reader.readAsDataURL(file);
         }
     }
     function resizeImage(img, maxW, maxH) {
@@ -601,26 +702,28 @@
         if (!currentImageData) { alert("Ambil atau upload foto dulu."); return; }
         const resultDiv = document.getElementById('resultArea');
         resultDiv.style.display = 'block';
-        resultDiv.innerHTML = '<p>🔍 Menganalisis...</p>';
+        resultDiv.innerHTML = '<p>🔍 Menganalisis gambar gigi...</p>';
         const img = new Image();
         img.onload = () => {
-            const canvas = resizeImage(img, 800, 600);
-            const ctx = canvas.getContext('2d');
-            const data = ctx.getImageData(0,0,canvas.width,canvas.height).data;
-            let dark = 0, total = data.length/4;
-            for (let i=0; i<data.length; i+=4) {
-                let brightness = (data[i]+data[i+1]+data[i+2])/3;
-                if (brightness < 50) dark++;
-            }
-            let ratio = dark/total;
-            let resultText, advice, isHealthy;
-            if (ratio < 0.05) { isHealthy=true; resultText="✅ Gigi Anda tampak SEHAT."; advice="Pertahankan kebersihan gigi."; }
-            else if (ratio < 0.12) { isHealthy=false; resultText="⚠️ Indikasi awal GIGI BERLUBANG."; advice="Kurangi gula, sikat gigi dengan fluoride, periksa ke puskesmas."; }
-            else { isHealthy=false; resultText="⚠️⚠️ Kemungkinan GIGI BERLUBANG LANJUTAN."; advice="Segera konsultasi ke tenaga kesehatan."; }
-            resultDiv.innerHTML = `<div class="${isHealthy?'result-healthy':'result-cavity'}"><h3>${resultText}</h3><p><strong>Saran:</strong> ${advice}</p><small>Hasil simulasi, bukan diagnosis medis.</small></div>`;
-            saveHistory(resultText, advice, currentImageData);
-            showToast("Deteksi selesai! Riwayat tersimpan.");
-            loadHistory();
+            try {
+                const canvas = resizeImage(img, 800, 600);
+                const ctx = canvas.getContext('2d');
+                const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+                let dark = 0, total = data.length / 4;
+                for (let i = 0; i < data.length; i += 4) {
+                    let brightness = (data[i] + data[i+1] + data[i+2]) / 3;
+                    if (brightness < 50) dark++;
+                }
+                let ratio = dark / total;
+                let resultText, advice, isHealthy;
+                if (ratio < 0.05) { isHealthy = true; resultText = "✅ Gigi Anda tampak SEHAT."; advice = "Pertahankan kebersihan gigi."; }
+                else if (ratio < 0.12) { isHealthy = false; resultText = "⚠️ Indikasi awal GIGI BERLUBANG."; advice = "Kurangi gula, sikat gigi dengan fluoride, periksa ke puskesmas."; }
+                else { isHealthy = false; resultText = "⚠️⚠️ Kemungkinan GIGI BERLUBANG LANJUTAN."; advice = "Segera konsultasi ke tenaga kesehatan."; }
+                resultDiv.innerHTML = `<div class="${isHealthy ? 'result-healthy' : 'result-cavity'}"><h3>${resultText}</h3><p><strong>Saran:</strong> ${advice}</p><small>Hasil simulasi, bukan diagnosis medis.</small></div>`;
+                saveHistory(resultText, advice, currentImageData);
+                showToast("Deteksi selesai! Riwayat tersimpan.");
+                loadHistory();
+            } catch(e) { resultDiv.innerHTML = '<p>Error analisis gambar.</p>'; }
         };
         img.src = currentImageData;
     }
@@ -631,7 +734,6 @@
         stopCamera();
         currentImageData = null;
     }
-
     function loadHomePage() {
         const container = document.getElementById('homeTips');
         if (container) {
@@ -639,15 +741,11 @@
         }
         loadHistory();
     }
-
-    window.onload = () => {
-        if (localStorage.getItem('currentUser')) { showApp(); }
-        else { document.getElementById('authPage').style.display = 'flex'; document.getElementById('appContainer').style.display = 'none'; }
-    };
-    function toggleAuthForm() {
-        const login = document.getElementById('loginForm'), signup = document.getElementById('signupForm');
-        if (login.style.display === 'none') { login.style.display = 'block'; signup.style.display = 'none'; }
-        else { login.style.display = 'none'; signup.style.display = 'block'; }
+    function showToast(msg) {
+        const toast = document.getElementById('toast');
+        toast.innerText = msg;
+        toast.style.display = 'block';
+        setTimeout(() => toast.style.display = 'none', 3000);
     }
 </script>
 </body>
